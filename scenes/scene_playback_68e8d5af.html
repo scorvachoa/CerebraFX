@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Alguna vez has agrupado cosas similares? ¡Eso es un conjunto!", "narration": "Piensa en cómo organizas tus juguetes, libros o incluso tu ropa. Siempre estás agrupando elementos que tienen algo en común. En matemáticas, a estas agrupaciones les damos un nombre especial: ¡conjuntos!"}, {"type": "visual", "text": "Un conjunto es una colección bien definida de elementos distintos.", "narration": "Un conjunto es simplemente una colección bien definida de objetos o elementos, donde cada elemento es único y no se repite. Por ejemplo, el conjunto A puede ser los números uno, dos y tres.", "formula": "$A = \\{1, 2, 3\\}$"}, {"type": "formula", "text": "Usamos este símbolo para decir que un elemento pertenece a un conjunto.", "narration": "Para indicar que un elemento forma parte de un conjunto, usamos un símbolo especial que parece una 'e' curvada. Si un elemento está en el conjunto, decimos que pertenece a él. Por ejemplo, el número uno pertenece al conjunto A.", "formula": "$x \\in A$"}, {"type": "visual", "text": "Conjuntos especiales: Vacío ($\\emptyset$) y Universal (U).", "narration": "Hay conjuntos muy importantes, como el conjunto vacío, que no tiene ningún elemento. También existe el conjunto universal, que contiene todos los elementos posibles que estamos considerando en un contexto específico.", "formula": "$\\emptyset = \\{\\}\\qquad U$"}, {"type": "step", "text": "La unión (A \\cup B) incluye elementos en A, en B, o en ambos.", "narration": "Una operación fundamental es la unión de conjuntos. Al unir dos conjuntos, formamos uno nuevo que incluye todos los elementos que están en el primer conjunto, en el segundo, o en ambos.", "formula": "$A \\cup B = \\{x \\mid x \\in A \\text{ o } x \\in B\\}$"}, {"type": "step", "text": "La intersección (A \\cap B) incluye solo elementos comunes a A y B.", "narration": "Otra operación clave es la intersección. Esta operación nos da un nuevo conjunto formado solo por los elementos que tienen en común ambos conjuntos.", "formula": "$A \\cap B = \\{x \\mid x \\in A \\text{ y } x \\in B\\}$"}, {"type": "conclusion", "text": "Los conjuntos son la base fundamental de muchas áreas de las matemáticas.", "narration": "Los conjuntos son una herramienta fundamental en matemáticas. Son la base para entender muchos otros conceptos como las relaciones, funciones y estructuras algebraicas. ¡Son esenciales!", "formula": "$(A \\cup B) \\cap C$"}];
+var T=107.592;
 var N=scenes.length;
 var D=T/N;
 
@@ -240,65 +240,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -575,7 +527,7 @@ scenes.forEach(function(s,i){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

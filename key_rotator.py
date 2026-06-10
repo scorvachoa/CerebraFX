@@ -2,11 +2,6 @@ import itertools
 import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).parent / ".env")
 
 
 class MissingGeminiKeysError(RuntimeError):
@@ -47,5 +42,11 @@ def indexed_gemini_keys() -> list[str]:
     return [v for _, v in sorted(indexed, key=lambda x: x[0])]
 
 
+_rotator_instance: KeyRotator | None = None
+
+
 def build_key_rotator() -> KeyRotator:
-    return KeyRotator(indexed_gemini_keys())
+    global _rotator_instance
+    if _rotator_instance is None:
+        _rotator_instance = KeyRotator(indexed_gemini_keys())
+    return _rotator_instance

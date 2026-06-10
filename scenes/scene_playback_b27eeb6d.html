@@ -19,9 +19,9 @@ body{width:1080px;height:1920px;overflow:hidden;font-family:'Inter',sans-serif;b
 .label{font-size:56px;margin-bottom:30px;line-height:1;display:inline-block}
 .text{font-size:68px;font-weight:900;color:#fff;line-height:1.4;text-shadow:0 4px 40px rgba(0,0,0,.5);margin-bottom:30px}
 .word{display:inline-block;opacity:0;transform:translateY(30px)}
-.katex-wrap{font-size:clamp(36px,4vw,72px);padding:24px;margin:8px 0;color:#fff;opacity:0;transform:scale(0.5);border-radius:20px;position:relative}
+.katex-wrap{font-size:clamp(48px,5vw,96px);padding:30px;margin:10px 0;color:#fff;opacity:0;transform:scale(0.5);border-radius:20px;position:relative}
 .kf-glow{position:absolute;inset:-4px;border-radius:24px;background:linear-gradient(135deg,#6c63ff33,#00d4ff33);opacity:0;filter:blur(20px);z-index:-1}
-.katex-wrap .katex{font-size:1em}
+.katex-wrap .katex{font-size:1.2em}
 canvas.gc{width:800px;height:600px;border-radius:24px;margin:10px auto;display:block;opacity:0}
 canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:block;opacity:0}
 .bg-c{position:absolute;border-radius:50%;opacity:.08;filter:blur(100px);pointer-events:none}
@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Sabes que algunos triángulos rectángulos esconden proporciones perfectas?", "narration": "¿Alguna vez te has preguntado si existen triángulos rectángulos con ángulos y lados que guardan proporciones muy especiales y fáciles de recordar?"}, {"type": "visual", "text": "El triángulo 30-60-90 tiene lados en proporción 1 : \\sqrt{3} : 2.", "narration": "Uno de ellos es el triángulo de treinta, sesenta y noventa grados. Sus lados siempre mantienen una relación uno a raíz de tres a dos."}, {"type": "formula", "text": "Lados del 30-60-90: Cateto opuesto a 30° es 'a', adyacente 'a\\sqrt{3}', hipotenusa '2a'.", "narration": "Esto significa que si el lado más corto mide 'a', el mediano es 'a' por raíz de tres, y la hipotenusa es el doble de 'a'.", "formula": "\\text{Lados: } a, a\\sqrt{3}, 2a"}, {"type": "visual", "text": "El triángulo 45-45-90 es isósceles con lados en proporción 1 : 1 : \\sqrt{2}.", "narration": "Otro triángulo notable es el de cuarenta y cinco, cuarenta y cinco y noventa grados. Es un triángulo rectángulo isósceles donde los dos catetos son iguales."}, {"type": "formula", "text": "Lados del 45-45-90: Catetos 'a', 'a', y la hipotenusa 'a\\sqrt{2}'.", "narration": "Si los catetos miden 'a', entonces la hipotenusa siempre será 'a' por raíz de dos.", "formula": "\\text{Lados: } a, a, a\\sqrt{2}"}, {"type": "conclusion", "text": "Los triángulos notables simplifican cálculos y resuelven problemas geométricos rápidamente.", "narration": "Conocer estos triángulos especiales te permitirá resolver problemas de geometría y trigonometría mucho más rápido, ¡son herramientas súper útiles!"}];
+var T=63.048;
 var N=scenes.length;
 var D=T/N;
 
@@ -89,7 +89,7 @@ var GR=[
 ];
 var BC=['b1a b1b','b2a b2b','b3a b3b','b4a b4b','b5a b5b','b6a b6b','b1a b1b','b2a b2b'];
 
-function drawGraph(canvasId,scene,progress){
+function drawGraph(canvasId,funcStr,label,progress,fill){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
@@ -114,115 +114,49 @@ function drawGraph(canvasId,scene,progress){
   ctx.textAlign='center';
   for(g=-4;g<=4;g++){if(g===0)continue;ctx.fillText(g,tx(g),ty(0)+40);ctx.fillText(g,20,ty(g));}
   ctx.fillText('0',tx(0)-25,ty(0)+40);
-  var gt=scene.graph_type||'function';
-  var fn=scene.graph_func||'x';
-  var lbl=scene.graph_label||'f(x)';
-  var fillArea=scene.formula&&scene.formula.indexOf('\\int')>=0;
-  var COL=['#6c63ff','#ff6b6b','#00d4ff','#ffd93d','#51cf66','#ff922b','#cc5de8','#20c997'];
-  if(gt==='parametric'){
-    var parts=(typeof fn==='string'?fn.split(';'):fn).map(function(s){return s.trim();});
-    var xf,yf;
-    try{xf=new Function('t','return '+parts[0]);}catch(e){xf=function(){return 0;};}
-    try{yf=new Function('t','return '+(parts[1]||'t'));}catch(e){yf=function(t){return t;};}
-    var tMin=scene.tMin||0,tMax=scene.tMax||2*Math.PI;
-    var N=500,limit=Math.floor(N*progress);
-    ctx.strokeStyle=COL[0];ctx.lineWidth=4;ctx.shadowColor=COL[0];ctx.shadowBlur=12;
-    ctx.beginPath();var started=false;
-    for(var i=0;i<=limit;i++){
-      var t=tMin+(tMax-tMin)*(i/N);
-      try{
-        var xx=xf(t),yy=yf(t);
-        if(!isFinite(xx)||!isFinite(yy)||Math.abs(xx)>20||Math.abs(yy)>20){started=false;continue;}
-        var px=tx(xx),py=ty(yy);
-        if(!started){ctx.moveTo(px,py);started=true;}else ctx.lineTo(px,py);
-      }catch(e){started=false;}
-    }
-    ctx.stroke();ctx.shadowBlur=0;
-    if(lbl&&progress>0.02){
-      ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 28px Inter,sans-serif';ctx.textAlign='right';
-      ctx.globalAlpha=Math.min(1,progress*5);ctx.fillText(lbl,W-20,50);ctx.globalAlpha=1;
-    }
-  }else if(gt==='polar'){
-    var rf;
-    try{rf=new Function('theta','return '+(typeof fn==='string'?fn:fn[0]));}catch(e){rf=function(){return 1;};}
-    var N=500,limit=Math.floor(N*progress);
-    ctx.strokeStyle=COL[0];ctx.lineWidth=4;ctx.shadowColor=COL[0];ctx.shadowBlur=12;
-    ctx.beginPath();var started=false;
-    for(var i=0;i<=limit;i++){
-      var theta=2*Math.PI*(i/N);
-      try{
-        var r=rf(theta);
-        var xx=r*Math.cos(theta),yy=r*Math.sin(theta);
-        if(!isFinite(xx)||!isFinite(yy)||Math.abs(xx)>20||Math.abs(yy)>20){started=false;continue;}
-        var px=tx(xx),py=ty(yy);
-        if(!started){ctx.moveTo(px,py);started=true;}else ctx.lineTo(px,py);
-      }catch(e){started=false;}
-    }
-    ctx.stroke();ctx.shadowBlur=0;
-    if(lbl&&progress>0.02){
-      ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 28px Inter,sans-serif';ctx.textAlign='right';
-      ctx.globalAlpha=Math.min(1,progress*5);ctx.fillText(lbl,W-20,50);ctx.globalAlpha=1;
-    }
-  }else if(gt==='inequality'){
-    var ineqFn;var ineqSign=scene.graph_inequality||'<';
-    try{ineqFn=new Function('x','return '+(typeof fn==='string'?fn:fn[0]));}catch(e){ineqFn=function(x){return x;};}
-    var totalPx=Math.floor(W*progress);var pts=[];
+  try{
+    var fn=new Function('x','return '+funcStr);
+    var totalPx=Math.floor(W*progress);
+    var pts=[];
     for(var px=0;px<=totalPx;px++){
       var x=xMin+px/xs;
-      try{var y=ineqFn(x);}catch(e){continue;}
+      var y;
+      try{y=fn(x);}catch(e){continue;}
       if(!isFinite(y)||Math.abs(y)>20)continue;
-      pts.push({px:px,py:ty(y)});
+      pts.push({px:px,py:ty(y),x:x,y:y});
     }
-    if(pts.length>1){
-      var fillTop=ineqSign.indexOf('>')>=0;
-      ctx.beginPath();ctx.moveTo(pts[0].px,fillTop?0:H);
-      for(var k=0;k<pts.length;k++)ctx.lineTo(pts[k].px,pts[k].py);
-      ctx.lineTo(pts[pts.length-1].px,fillTop?0:H);ctx.closePath();
-      var gf=ctx.createLinearGradient(0,0,0,H);
-      gf.addColorStop(0,'rgba(108,99,255,0.25)');gf.addColorStop(1,'rgba(108,99,255,0)');
-      ctx.fillStyle=gf;ctx.fill();
-      ctx.strokeStyle='#6c63ff';ctx.lineWidth=4;ctx.shadowColor='#6c63ff';ctx.shadowBlur=12;
+    if(fill&&pts.length>1){
       ctx.beginPath();
-      for(var k=0;k<pts.length;k++){if(k===0)ctx.moveTo(pts[k].px,pts[k].py);else ctx.lineTo(pts[k].px,pts[k].py);}
-      ctx.stroke();ctx.shadowBlur=0;
+      ctx.moveTo(pts[0].px,ty(0));
+      for(var k=0;k<pts.length;k++)ctx.lineTo(pts[k].px,pts[k].py);
+      ctx.lineTo(pts[pts.length-1].px,ty(0));
+      ctx.closePath();
+      var gf=ctx.createLinearGradient(0,0,0,H);
+      gf.addColorStop(0,'rgba(108,99,255,0.3)');
+      gf.addColorStop(1,'rgba(108,99,255,0)');
+      ctx.fillStyle=gf;
+      ctx.fill();
     }
-    if(lbl&&progress>0.02){
-      ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 28px Inter,sans-serif';ctx.textAlign='right';
-      ctx.globalAlpha=Math.min(1,progress*5);ctx.fillText(lbl,W-20,50);ctx.globalAlpha=1;
+    ctx.strokeStyle='#6c63ff';
+    ctx.lineWidth=4;
+    ctx.shadowColor='#6c63ff';
+    ctx.shadowBlur=12;
+    ctx.beginPath();
+    for(var k=0;k<pts.length;k++){
+      if(k===0)ctx.moveTo(pts[k].px,pts[k].py);
+      else ctx.lineTo(pts[k].px,pts[k].py);
     }
-  }else{
-    var funcs=Array.isArray(fn)?fn:[fn];
-    var labels=Array.isArray(lbl)?lbl:[lbl];
-    for(var fi=0;fi<funcs.length;fi++){
-      try{
-        var f=new Function('x','return '+funcs[fi]);
-        var totalPx=Math.floor(W*progress);var pts=[];
-        for(var px=0;px<=totalPx;px++){
-          var x=xMin+px/xs;
-          try{var y=f(x);}catch(e){continue;}
-          if(!isFinite(y)||Math.abs(y)>20)continue;
-          pts.push({px:px,py:ty(y),x:x,y:y});
-        }
-        if(fi===0&&fillArea&&pts.length>1){
-          ctx.beginPath();ctx.moveTo(pts[0].px,ty(0));
-          for(var k=0;k<pts.length;k++)ctx.lineTo(pts[k].px,pts[k].py);
-          ctx.lineTo(pts[pts.length-1].px,ty(0));ctx.closePath();
-          var gf=ctx.createLinearGradient(0,0,0,H);
-          gf.addColorStop(0,'rgba(108,99,255,0.3)');gf.addColorStop(1,'rgba(108,99,255,0)');
-          ctx.fillStyle=gf;ctx.fill();
-        }
-        ctx.strokeStyle=COL[fi%COL.length];ctx.lineWidth=4;
-        ctx.shadowColor=COL[fi%COL.length];ctx.shadowBlur=12;
-        ctx.beginPath();
-        for(var k=0;k<pts.length;k++){if(k===0)ctx.moveTo(pts[k].px,pts[k].py);else ctx.lineTo(pts[k].px,pts[k].py);}
-        ctx.stroke();ctx.shadowBlur=0;
-        if(labels[fi]&&progress>0.02){
-          ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 28px Inter,sans-serif';ctx.textAlign='right';
-          ctx.globalAlpha=Math.min(1,progress*5);ctx.fillText(labels[fi],W-20,50+fi*40);ctx.globalAlpha=1;
-        }
-      }catch(e){}
+    ctx.stroke();
+    ctx.shadowBlur=0;
+    if(label&&progress>0.02){
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.font='bold 28px Inter,sans-serif';
+      ctx.textAlign='right';
+      ctx.globalAlpha=Math.min(1,progress*5);
+      ctx.fillText(label,W-20,50);
+      ctx.globalAlpha=1;
     }
-  }
+  }catch(e){}
 }
 
 function norm(s){return(typeof s=='string'?s:'').toLowerCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
@@ -240,65 +174,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -319,7 +205,7 @@ function drawVisual(canvasId,scene,progress){
   }
 
   // --- Right triangle ---
-  if(both.indexOf('triang')>=0||both.indexOf('catet')>=0||both.indexOf('pitag')>=0||both.indexOf('hipoten')>=0||both.indexOf('rectangulo')>=0||fml.indexOf('a^2+b^2')>=0){
+  if(both.indexOf('triangulo')>=0||both.indexOf('catet')>=0||both.indexOf('pitag')>=0||both.indexOf('hipoten')>=0||fml.indexOf('a^2+b^2')>=0){
     var sz=250*p;
     ctx.strokeStyle='#6c63ff';ctx.lineWidth=5;
     ctx.beginPath();ctx.moveTo(cx-sz,cy+sz);ctx.lineTo(cx+sz,cy+sz);ctx.lineTo(cx-sz,cy-sz);ctx.closePath();ctx.stroke();
@@ -514,7 +400,7 @@ scenes.forEach(function(s,i){
   if(s.formula){
     html+='<div class="katex-wrap" id="kf'+i+'"><div class="kf-glow" id="kg'+i+'"></div></div>';
   }
-  if(s.type==='graph'){
+  if(s.type==='graph'&&s.graph_func){
     html+='<canvas class="gc" id="gcv'+i+'" width="800" height="600"></canvas>';
   }
   if(s.type==='visual'){
@@ -564,18 +450,19 @@ scenes.forEach(function(s,i){
     tl.to('#kf'+i,{y:-3,duration:1.5,ease:'sine.inOut',yoyo:true,repeat:-1},formulaTime+0.7);
   }
 
-  if(s.type==='graph'){
+  if(s.type==='graph'&&s.graph_func){
     var afterText=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#gcv'+i,{opacity:1,duration:0.2},afterText);
+    var fillArea=s.formula&&s.formula.indexOf('\\int')>=0;
     var gp={p:0};
-    tl.to(gp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawGraph('gcv'+i,s,gp.p);}},afterText+0.1);
+    tl.to(gp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawGraph('gcv'+i,s.graph_func,s.graph_label,gp.p,fillArea);}},afterText+0.1);
   }
 
   if(s.type==='visual'){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

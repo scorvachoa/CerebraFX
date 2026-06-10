@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Cómo medimos el cambio exacto en un instante?", "narration": "Alguna vez te has preguntado cómo podemos medir la velocidad o el cambio exacto de algo, no en un periodo, sino en un instante preciso?"}, {"type": "visual", "text": "La derivada es la pendiente de la recta tangente a una curva.", "narration": "Imagina una carretera con subidas y bajadas. En cualquier punto, la derivada nos dice qué tan empinada es esa carretera, es la pendiente de la recta tangente."}, {"type": "formula", "text": "Se define como un límite de la razón de cambio.", "narration": "Matemáticamente, la derivada se define a través de un límite que calcula la pendiente de una recta secante a medida que los puntos se acercan infinitamente.", "formula": "f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}"}, {"type": "graph", "text": "La derivada nos da la pendiente en cada punto de la curva.", "narration": "Aquí vemos una función y su derivada. La derivada, representada por la línea azul, nos muestra el valor de la pendiente de la recta tangente a la función original en cada punto.", "graph_func": ["x*x", "2*x"], "graph_label": ["f(x)", "f'(x)"]}, {"type": "step", "text": "Calculamos derivadas usando reglas simples.", "narration": "Por suerte, no siempre tenemos que usar el límite. Existen reglas y fórmulas que nos permiten calcular derivadas de forma más sencilla y rápida.", "formula": "\\frac{d}{dx}(x^n) = nx^{n-1} \\quad \\implies \\quad \\frac{d}{dx}(x^2) = 2x"}, {"type": "conclusion", "text": "La derivada: el ritmo de cambio instantáneo en cualquier función.", "narration": "En resumen, la derivada es una herramienta fundamental en matemáticas y ciencias para entender cómo cambian las cosas, dándonos el ritmo de cambio instantáneo de cualquier función."}];
+var T=74.712;
 var N=scenes.length;
 var D=T/N;
 
@@ -240,65 +240,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -575,7 +527,7 @@ scenes.forEach(function(s,i){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

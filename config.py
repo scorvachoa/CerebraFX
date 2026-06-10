@@ -16,8 +16,6 @@ class Config:
     if not GEMINI_API_KEYS:
         GEMINI_API_KEYS = indexed_gemini_keys()
 
-    GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else ""
-
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
     ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
     ELEVENLABS_MODEL_ID = os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")

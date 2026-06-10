@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -34,11 +35,31 @@ def check_dependencies():
     return True
 
 
-def generate_script(topic: str) -> dict:
+def _truncate_scenes(script: dict, max_len: int = 120) -> dict:
+    for scene in script.get("scenes", []):
+        if len(scene.get("text", "")) > max_len:
+            scene["text"] = scene["text"][: max_len - 3] + "..."
+    return script
+
+
+_CATEGORY_HINTS = {
+    "algebra": "Álgebra: usa graph_func con polinomios (x*x, 2*x+3, x*x-4), ecuaciones lineales y cuadráticas. Incluye graph_type 'function' o 'multiple' para comparar funciones.",
+    "trigonometry": "Trigonometría: usa graph_type 'parametric' para círculo (cos(t); sin(t)), graph_type 'polar' para curvas polares. Incluye type 'visual' con seno/coseno para círculo trigonométrico y triángulos.",
+    "calculus": "Cálculo: usa graph_func con derivadas (2*x, 3*x*x) e integrales. graph_type 'inequality' para áreas. Incluye \\int y \\frac en formulas LaTeX.",
+    "geometry": "Geometría: usa type 'visual' para triángulos, círculos y figuras geométricas. Incluye triángulo rectángulo con Pitágoras (a^2+b^2=c^2).",
+    "graph_theory": "Teoría de Grafos: usa type 'visual' con visual_type='graph_theory', graph_nodes=['A','B','C',...], graph_edges=['0-1','1-2',...]. Incluye grafos dirigidos (graph_directed=true) y no dirigidos.",
+    "statistics": "Estadística: usa graph_type 'function' o 'multiple' para distribuciones. Puedes incluir histogramas conceptuales con type 'visual'.",
+    "arithmetic": "Aritmética: usa type 'step' para operaciones paso a paso. type 'visual' para fracciones (\\frac) y raíces (\\sqrt).",
+}
+
+def generate_script(topic: str, category: str = "general") -> dict:
+    cat_hint = _CATEGORY_HINTS.get(category, "")
     prompt = (
         "Eres un creador de videos educativos de MATEMÁTICAS. "
         "Genera un guion JSON para un video corto sobre: " + topic + "\n\n"
-        "Formato EXACTO (solo JSON, sin markdown, sin backticks):\n"
+        "Categoría: " + (category if category != "general" else "Matemáticas general") + "\n"
+        + (cat_hint + "\n" if cat_hint else "")
+        + "Formato EXACTO (solo JSON, sin markdown, sin backticks):\n"
         '{\n'
         '  "title": "Título del video",\n'
         '  "scenes": [\n'
@@ -47,8 +68,10 @@ def generate_script(topic: str) -> dict:
         '      "text": "texto en pantalla (máx 120 caracteres)",\n'
         '      "narration": "mismo texto pero solo para narración de audio, sin LaTeX ni notación matemática, lenguaje natural y fluido",\n'
         '      "formula": "LaTeX opcional",\n'
-        '      "graph_func": "función JS opcional ej: Math.sin(x)",\n'
-        '      "graph_label": "etiqueta opcional para el gráfico"\n'
+         '      "graph_func": "función JS opcional. String simple (x*x) o array [x*x, 2*x+1] para múltiples curvas. Para paramétricas: cos(t); sin(t) (x(t); y(t) separado por ;)",\n'
+         '      "graph_label": "etiqueta opcional. Si graph_func es array, graph_label también debe ser array",\n'
+         '      "graph_type": "opcional: function (default), parametric, polar, inequality",\n'
+         '      "graph_inequality": "solo si graph_type=inequality: < o > para sombrear región"\n'
         '    }\n'
         '  ]\n'
         "}\n\n"
@@ -57,14 +80,20 @@ def generate_script(topic: str) -> dict:
         "- type hook: pregunta intrigante, SIN fórmula\n"
         "- type formula: muestra una fórmula grande con LaTeX\n"
         "- type step: paso de solución, puede incluir fórmula\n"
-        "- type graph: incluye graph_func (ej: '2*x', 'x*x', 'Math.sin(x)')\n"
-        "- type visual: concepto visual/geométrico, puede incluir formula\n"
-        "- type conclusion: resumen final, puede incluir formula\n"
-        "- Cada text: 1 oración corta para pantalla, máx 120 caracteres\n"
-        "- Cada narration: texto fluido para audio, sin fórmulas ni LaTeX, explica la idea en lenguaje natural\n"
-        "- Las fórmulas LaTeX usan \\\\ para comandos (\\\\frac, \\\\sqrt, etc)\n"
-        "- graph_func debe ser evaluable en JS (usa Math.* para funciones)\n"
-        "- Responde ÚNICAMENTE el JSON válido, nada más"
+        "- type graph: incluye graph_func (string para 1 función, array para múltiples curvas, o separado por ; para paramétricas)\n"
+         "  · graph_type 'function' (default): graph_func string JS, ej: '2*x', 'x*x', 'Math.sin(x)'\n"
+         "  · graph_type 'multiple': graph_func como array, ej: [\"x*x\", \"2*x+1\"], cada una con color diferente\n"
+         "  · graph_type 'parametric': graph_func como 'x(t); y(t)', ej: 'cos(t); sin(t)' para círculo\n"
+         "  · graph_type 'polar': graph_func como r(θ), ej: '2*cos(theta)' para cardioide\n"
+         "  · graph_type 'inequality': sombrea región, añade graph_inequality '<' o '>' ej: 'x*x' con '<' sombrea y < x²\n"
+          "- type visual: concepto visual/geométrico, puede incluir formula\n"
+         "  · Para grafos (teoría de grafos): añade 'visual_type':'graph_theory', 'graph_nodes':['A','B','C'], 'graph_edges':['0-1','1-2','0-2'] (índices numéricos de nodes), 'graph_directed':true/false\n"
+         "- type conclusion: resumen final, puede incluir formula\n"
+         "- Cada text: 1 oración corta para pantalla, máx 120 caracteres\n"
+         "- Cada narration: texto fluido para audio, sin fórmulas ni LaTeX, explica la idea en lenguaje natural\n"
+         "- Las fórmulas LaTeX usan \\\\ para comandos (\\\\frac, \\\\sqrt, etc)\n"
+         "- graph_func debe ser evaluable en JS (usa Math.* para funciones trigonométricas, sqrt, abs, etc)\n"
+         "- Responde ÚNICAMENTE el JSON válido, nada más"
     )
 
     rotator = build_key_rotator()
@@ -83,10 +112,14 @@ def generate_script(topic: str) -> dict:
                     model = genai.GenerativeModel(model_name)
                     response = model.generate_content(prompt)
                     text = response.text.strip()
-                    if text.startswith("```"):
-                        lines = text.split("\n")
-                        text = "\n".join(lines[1:-1]).strip()
-                    return json.loads(text)
+                    fence_match = re.search(r'```(?:json)?\s*\n?(.*?)```', text, re.DOTALL)
+                    if fence_match:
+                        text = fence_match.group(1).strip()
+                    script = _truncate_scenes(json.loads(text))
+                    script["category"] = category
+                    for sc in script.get("scenes", []):
+                        sc["category"] = category
+                    return script
                 except google_exc.ResourceExhausted:
                     if attempt == 0:
                         time.sleep(1)
@@ -111,7 +144,11 @@ def generate_script(topic: str) -> dict:
         time.sleep(3)
 
     print("  APIs no disponibles, usando guion de respaldo...")
-    return _fallback_script(topic)
+    script = _truncate_scenes(_fallback_script(topic))
+    script["category"] = category
+    for sc in script.get("scenes", []):
+        sc["category"] = category
+    return script
 
 
 def _fallback_script(topic: str) -> dict:
@@ -149,6 +186,26 @@ def _fallback_script(topic: str) -> dict:
                 {"type": "conclusion", "text": "3² + 4² = 5² ¡El teorema funciona!", "narration": "3 al cuadrado mas 4 al cuadrado es igual a 5 al cuadrado. El teorema funciona", "formula": "3^2 + 4^2 = 5^2"},
             ]
         },
+        "circunferencia": {
+            "title": "Circunferencia y Trigonometría",
+            "scenes": [
+                {"type": "hook", "text": "¿Cómo se dibuja un círculo con funciones?", "narration": "Como se dibuja un circulo con funciones"},
+                {"type": "formula", "text": "Ecuación paramétrica del círculo", "narration": "La ecuacion parametrica del circulo usa seno y coseno", "formula": "x = \\cos(t), \\quad y = \\sin(t)"},
+                {"type": "graph", "text": "El círculo unitario", "narration": "Al variar t de 0 a 2 pi, obtenemos un circulo", "formula": "x^2 + y^2 = 1", "graph_func": "Math.cos(t); Math.sin(t)", "graph_type": "parametric", "graph_label": "Círculo unitario"},
+                {"type": "step", "text": "Para cualquier ángulo t, (cos t, sen t) está en el círculo", "narration": "Para cualquier angulo t, el coseno y seno forman un punto en el circulo", "formula": "\\cos^2(t) + \\sin^2(t) = 1"},
+                {"type": "conclusion", "text": "Las paramétricas describen curvas complejas fácilmente", "narration": "Las parametricas describen curvas complejas facilmente", "formula": "x = \\cos(t), y = \\sin(t)"},
+            ]
+        },
+        "desigualdad cuadratica": {
+            "title": "Desigualdad Cuadrática",
+            "scenes": [
+                {"type": "hook", "text": "¿Qué significa y < x²?", "narration": "Que significa y menor que x al cuadrado"},
+                {"type": "formula", "text": "Desigualdad cuadrática", "narration": "Una desigualdad cuadratica relaciona y con x al cuadrado", "formula": "y < x^2"},
+                {"type": "graph", "text": "Región sombreada debajo de la parábola", "narration": "La region sombreada debajo de la parabola representa todos los puntos donde y es menor que x al cuadrado", "formula": "y < x^2", "graph_func": "x*x", "graph_type": "inequality", "graph_inequality": "<", "graph_label": "y < x²"},
+                {"type": "step", "text": "La parábola es el borde de la región", "narration": "La parabola es el borde de la region", "formula": "y = x^2"},
+                {"type": "conclusion", "text": "El área sombreada muestra todas las soluciones", "narration": "El area sombreada muestra todas las soluciones de la desigualdad", "formula": "y < x^2"},
+            ]
+        },
         "funcion cuadratica": {
             "title": "Función Cuadrática",
             "scenes": [
@@ -158,6 +215,17 @@ def _fallback_script(topic: str) -> dict:
                 {"type": "step", "text": "El vértice está en x = -b/(2a)", "narration": "El vertice esta en x igual a menos b sobre 2a", "formula": "x_v = \\frac{-b}{2a} = \\frac{2}{2} = 1"},
                 {"type": "step", "text": "Las raíces son los puntos donde cruza el eje x", "narration": "Las raices se calculan con la formula general", "formula": "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"},
                 {"type": "conclusion", "text": "La parábola abre hacia arriba si a > 0", "narration": "La parabola abre hacia arriba si a es mayor que cero", "formula": "f(x) = x^2 - 2x - 3"},
+            ]
+        },
+        "teorema de grafos": {
+            "title": "Teorema de Grafos",
+            "scenes": [
+                {"type": "hook", "text": "¿Qué es un grafo y para qué sirve?", "narration": "Que es un grafo y para que sirve"},
+                {"type": "visual", "text": "Un grafo tiene vértices y aristas", "narration": "Un grafo tiene vertices y aristas que los conectan", "formula": "G = (V, E)", "visual_type": "graph_theory", "graph_nodes": ["A","B","C","D","E"], "graph_edges": ["0-1","0-2","1-2","1-3","2-3","2-4","3-4"], "graph_directed": False},
+                {"type": "step", "text": "Las aristas conectan pares de vértices", "narration": "Las aristas conectan pares de vertices"},
+                {"type": "formula", "text": "Propiedades de grafos", "narration": "El grado de un vertice es el numero de aristas que inciden en el", "formula": "\\deg(v) = |\\{e \\in E : v \\in e\\}|"},
+                {"type": "visual", "text": "Un grafo dirigido tiene aristas con dirección", "narration": "Un grafo dirigido tiene aristas con direccion", "formula": "\\vec{G}", "visual_type": "graph_theory", "graph_nodes": ["A","B","C","D"], "graph_edges": ["0-1","0-2","1-3","2-3","3-0"], "graph_directed": True},
+                {"type": "conclusion", "text": "Los grafos modelan redes y relaciones", "narration": "Los grafos modelan redes y relaciones en muchas areas"},
             ]
         },
     }
@@ -178,8 +246,9 @@ def _fallback_script(topic: str) -> dict:
     }
 
 
-def generate_audio(text: str) -> Path:
-    path = Config.DIRS["audio"] / "narration.mp3"
+def generate_audio(text: str, suffix: str = "") -> Path:
+    filename = f"narration_{suffix}.mp3" if suffix else "narration.mp3"
+    path = Config.DIRS["audio"] / filename
 
     if Config.ELEVENLABS_API_KEY:
         try:
@@ -210,15 +279,9 @@ def generate_audio(text: str) -> Path:
         tts.save(str(path))
         print(f"  Audio generado con gTTS (Google TTS)")
     except ImportError:
-        print("  Instalando gTTS...")
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "gtts"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        from gtts import gTTS
-        tts = gTTS(text=text, lang="es")
-        tts.save(str(path))
-        print(f"  Audio generado con gTTS")
+        print("  gTTS no instalado. Instálalo con: pip install gtts")
+        print("  Mientras tanto, configura ELEVENLABS_API_KEY en .env")
+        raise RuntimeError("gTTS no disponible. Instálalo o usa ElevenLabs.")
     return path
 
 
@@ -228,20 +291,32 @@ def get_audio_duration(path: Path) -> float:
          "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
         capture_output=True, text=True, check=True
     )
-    return float(r.stdout.strip())
+    raw = r.stdout.strip()
+    if not raw:
+        raise RuntimeError(f"No se pudo obtener la duración de {path}")
+    return float(raw)
 
 
-def generate_html(script: dict, duration: float) -> Path:
+def generate_html(script: dict, duration: float, suffix: str = "") -> Path:
     template = (Config.DIRS["templates"] / "scene.html").read_text(encoding="utf-8")
     scenes_json = json.dumps(script["scenes"], ensure_ascii=False).replace("</", "<\\/")
-    html = template.replace("{{SCENES}}", scenes_json).replace("{{DURATION}}", str(duration))
-    out = Config.DIRS["scenes"] / "scene_playback.html"
+    parts = template.split("{{SCENES}}")
+    if len(parts) != 2:
+        raise ValueError("Template debe contener exactamente un {{SCENES}}")
+    html = parts[0] + scenes_json + parts[1]
+    parts = html.split("{{DURATION}}")
+    if len(parts) != 2:
+        raise ValueError("Template debe contener exactamente un {{DURATION}}")
+    html = parts[0] + str(duration) + parts[1]
+    filename = f"scene_playback_{suffix}.html" if suffix else "scene_playback.html"
+    out = Config.DIRS["scenes"] / filename
     out.write_text(html, encoding="utf-8")
     return out
 
 
-def render_video(html_path: Path, duration: float) -> Path:
-    record_dir = Config.DIRS["output"] / "record"
+def render_video(html_path: Path, duration: float, suffix: str = "") -> Path:
+    dirname = f"record_{suffix}" if suffix else "record"
+    record_dir = Config.DIRS["output"] / dirname
     if record_dir.exists():
         shutil.rmtree(record_dir)
     record_dir.mkdir(parents=True)
@@ -265,14 +340,16 @@ def render_video(html_path: Path, duration: float) -> Path:
     if not webms:
         raise RuntimeError("No se generó video con Playwright")
     recorded = webms[0]
-    dest = Config.DIRS["scenes"] / "recording.webm"
+    rec_name = f"recording_{suffix}.webm" if suffix else "recording.webm"
+    dest = Config.DIRS["scenes"] / rec_name
     shutil.move(str(recorded), str(dest))
     shutil.rmtree(record_dir)
     return dest
 
 
-def create_final_video(video_path: Path, audio_path: Path) -> Path:
-    out = Config.DIRS["videos"] / "final_video.mp4"
+def create_final_video(video_path: Path, audio_path: Path, suffix: str = "") -> Path:
+    out_name = f"final_video_{suffix}.mp4" if suffix else "final_video.mp4"
+    out = Config.DIRS["videos"] / out_name
     bg_music = BASE_DIR / "assets" / "mixkit-tech-house-vibes-130.mp3"
 
     cmd = [
@@ -317,7 +394,7 @@ def main():
     print(f"  Título: {script['title']}")
     print(f"  Escenas: {len(script['scenes'])}")
 
-    full_text = ". ".join(s.get("narration") or s["text"] for s in script["scenes"])
+    full_text = ". ".join(s["narration"] if "narration" in s else s["text"] for s in script["scenes"])
     print(f"Generando audio ({len(full_text)} caracteres)...")
     audio_path = generate_audio(full_text)
     print(f"  Audio: {audio_path}")

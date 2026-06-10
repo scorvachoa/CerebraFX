@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Cómo conectamos puntos e ideas? ¡Con la Teoría de Grafos!", "narration": "¿Alguna vez te has preguntado cómo se modelan las redes sociales, los mapas de carreteras o las conexiones eléctricas? La Teoría de Grafos nos da la respuesta."}, {"type": "visual", "text": "Un grafo G=(V,E) tiene vértices (puntos) y aristas (conexiones).", "narration": "Un grafo se compone de un conjunto de vértices, que son los puntos, y un conjunto de aristas, que son las líneas que conectan esos puntos. Visualmente, imagina un mapa de ciudades y carreteras."}, {"type": "formula", "text": "Lema del Apretono de Manos: clave para entender la estructura de grafos.", "narration": "Uno de los teoremas más fundamentales es el Lema del Apretono de Manos. Nos dice algo profundo sobre la suma de las conexiones en un grafo.", "formula": "\\sum_{v \\in V} \\text{deg}(v) = 2|E|"}, {"type": "step", "text": "Cada arista conecta dos vértices, contribuyendo dos veces a la suma total de grados.", "narration": "Piensa en esto: cada arista en un grafo conecta exactamente dos vértices. Por lo tanto, cada arista es contada dos veces cuando sumamos los grados de todos los vértices."}, {"type": "step", "text": "Si tienes 3 vértices con grados 2, 3, 1, la suma es 6, lo que implica 3 aristas.", "narration": "Por ejemplo, si un grafo tiene tres vértices con grados dos, tres y uno, la suma total de sus grados es seis. Esto significa que el número de aristas en este grafo debe ser tres.", "formula": "2+3+1 = 6 \\implies 2|E|=6 \\implies |E|=3"}, {"type": "conclusion", "text": "El Lema del Apretono de Manos es esencial para analizar redes y estructuras.", "narration": "Este lema es crucial para entender la paridad de los vértices y es una herramienta básica para analizar la estructura de cualquier red, desde redes sociales hasta circuitos eléctricos."}];
+var T=81.336;
 var N=scenes.length;
 var D=T/N;
 
@@ -240,65 +240,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -575,7 +527,7 @@ scenes.forEach(function(s,i){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

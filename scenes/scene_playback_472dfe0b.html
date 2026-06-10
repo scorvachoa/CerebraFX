@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Cómo organizamos la información?", "narration": "¿Alguna vez te has preguntado cómo clasificamos y agrupamos las cosas en nuestra vida diaria? Desde tus amigos hasta tus libros favoritos."}, {"type": "formula", "text": "Un conjunto es una colección bien definida de objetos.", "narration": "En matemáticas, a estas colecciones de objetos distintos les llamamos conjuntos. Cada objeto dentro de un conjunto es un elemento.", "formula": "$A = \\{1, 2, 3, 4\\}$"}, {"type": "step", "text": "Los elementos pertenecen (∈) o no (∉) al conjunto.", "narration": "Para indicar si un elemento forma parte de un conjunto, usamos el símbolo de pertenencia. Si no pertenece, usamos el mismo símbolo tachado.", "formula": "$1 \\in A \\qquad 5 \\notin A$"}, {"type": "formula", "text": "La unión de conjuntos (∪) combina todos los elementos.", "narration": "Una operación fundamental es la unión. Esta operación crea un nuevo conjunto con todos los elementos de los conjuntos originales, sin repetir ninguno.", "formula": "$A \\cup B = \\{x \\mid x \\in A \\text{ o } x \\in B\\}$"}, {"type": "visual", "text": "Si $A=\\{1,2\\}$ y $B=\\{2,3\\}$, entonces $A \\cup B = \\{1,2,3\\}$", "narration": "Por ejemplo, si el conjunto A tiene los elementos uno y dos, y el conjunto B tiene dos y tres, la unión de A y B será el conjunto con los elementos uno, dos y tres. El dos solo aparece una vez.", "formula": "$A \\cup B$"}, {"type": "conclusion", "text": "Los conjuntos son la base para organizar ideas en matemáticas.", "narration": "Los conjuntos son esenciales para clasificar, contar y relacionar ideas, formando los cimientos de muchas ramas de las matemáticas y la informática. ¡Son la clave para el orden!"}];
+var T=74.064;
 var N=scenes.length;
 var D=T/N;
 
@@ -240,65 +240,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -575,7 +527,7 @@ scenes.forEach(function(s,i){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

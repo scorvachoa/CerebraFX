@@ -71,8 +71,8 @@ canvas.vc{width:700px;height:700px;border-radius:24px;margin:10px auto;display:b
   }
 })();
 
-var scenes={{SCENES}};
-var T={{DURATION}};
+var scenes=[{"type": "hook", "text": "¿Qué son los conjuntos y por qué son importantes en matemáticas?", "narration": "Alguna vez has agrupado cosas que comparten características similares, como tus juguetes, tus libros o tus amigos. ¡Eso es un conjunto! En matemáticas, los conjuntos son fundamentales para organizar y entender la información. Pero, ¿qué son exactamente?"}, {"type": "visual", "text": "Un conjunto es una colección bien definida de objetos distintos.", "narration": "Un conjunto es simplemente una colección de objetos distintos, llamados elementos, que están bien definidos. Esto significa que podemos determinar si un objeto pertenece o no al conjunto. Por ejemplo, el conjunto de los días de la semana."}, {"type": "formula", "text": "Notación de conjuntos y pertenencia de elementos.", "narration": "Para representar un conjunto, usamos letras mayúsculas y encerramos sus elementos entre llaves. Si un elemento 'a' pertenece a un conjunto 'A', usamos este símbolo que indica pertenencia.", "formula": "$A = \\{a, e, i, o, u\\}$ \\newline $a \\in A$ (a pertenece a A)"}, {"type": "visual", "text": "Tipos básicos de conjuntos: vacío, universal y subconjunto.", "narration": "Existen diferentes tipos de conjuntos. Un conjunto vacío no tiene elementos. Un conjunto universal contiene todos los elementos posibles dentro de un contexto. Y un subconjunto es un conjunto donde todos sus elementos también están contenidos en otro conjunto más grande.", "formula": "$B \\subset A$ (B es subconjunto de A)"}, {"type": "visual", "text": "Operación de Unión: $A \\cup B$. Contiene todos los elementos de ambos conjuntos.", "narration": "Con los conjuntos, podemos realizar operaciones. La unión de dos conjuntos A y B, que se representa con este símbolo, es un nuevo conjunto que contiene absolutamente todos los elementos de A y todos los elementos de B, sin repetir ninguno.", "formula": "$A \\cup B = \\{x \\mid x \\in A \\text{ o } x \\in B\\}$"}, {"type": "visual", "text": "Operación de Intersección: $A \\cap B$. Contiene elementos comunes a ambos.", "narration": "La intersección de dos conjuntos A y B, simbolizada así, es el conjunto de todos los elementos que están presentes tanto en A como en B al mismo tiempo. Son los elementos que ambos conjuntos comparten."}, {"type": "visual", "text": "Los diagramas de Venn visualizan las relaciones entre conjuntos.", "narration": "Los diagramas de Venn son herramientas visuales muy útiles para entender los conjuntos y sus operaciones. Los círculos representan los conjuntos y las regiones superpuestas muestran las relaciones entre ellos, como la unión o la intersección, de forma gráfica."}, {"type": "conclusion", "text": "Los conjuntos son la base para organizar información y resolver problemas complejos.", "narration": "En resumen, los conjuntos nos permiten agrupar elementos y realizar operaciones con ellos, siendo una herramienta esencial en lógica, informática, estadística y muchas otras áreas de las matemáticas. ¡Ahora sabes qué son y cómo empezar a usarlos!"}];
+var T=150.528;
 var N=scenes.length;
 var D=T/N;
 
@@ -240,65 +240,17 @@ function drawGrid(ctx,cx,cy,S,faint){
   ctx.beginPath();ctx.moveTo(cx,cy-300);ctx.lineTo(cx,cy+300);ctx.stroke();
 }
 
-function drawVisual(canvasId,scene,progress){
+function drawVisual(canvasId,formula,progress,sceneText){
   var cv=document.getElementById(canvasId);
   if(!cv)return;
   var ctx=cv.getContext('2d');
   var S=700,cx=S/2,cy=S/2;
   ctx.fillStyle='rgba(10,10,30,0.85)';
   ctx.fillRect(0,0,S,S);
-  var formula=scene.formula||'';
-  var sceneText=scene.text||'';
   var fml=norm(formula);
   var txt=norm(sceneText);
   var both=fml+'|'+txt;
   var p=Math.min(1,Math.max(0,progress));
-
-  // --- Graph theory (nodes + edges) ---
-  if(scene.visual_type==='graph_theory'||scene.graph_nodes||scene.graph_edges){
-    var nodes=scene.graph_nodes||[];
-    var edges=scene.graph_edges||[];
-    var dir=scene.graph_directed===true;
-    var N=nodes.length||5;
-    var R=Math.min(250,Math.max(180,280-N*12));
-    var total=Math.floor(p*(N+edges.length));
-    if(!nodes.length)for(var g=0;g<N;g++)nodes.push('v'+(g+1));
-    var positions=[];
-    for(var g=0;g<N;g++){
-      var a=2*Math.PI*g/N-Math.PI/2;
-      positions.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a),label:nodes[g]});
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,R+30,0,Math.PI*2);ctx.stroke();
-    var drawEdges=Math.min(edges.length,Math.max(0,total));
-    for(var g=0;g<drawEdges;g++){
-      var e=edges[g];var eis=typeof e==='string'?e.split('-'):e;
-      var ei=parseInt(eis[0])||0,ej=parseInt(eis[1])||0;
-      var pi=positions[ei%N],pj=positions[ej%N];
-      ctx.strokeStyle='rgba(108,99,255,0.7)';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(pi.x,pi.y);ctx.lineTo(pj.x,pj.y);ctx.stroke();
-      if(dir){
-        var dx=pj.x-pi.x,dy=pj.y-pi.y,ad=Math.sqrt(dx*dx+dy*dy);
-        if(ad>1){dx/=ad;dy/=ad;
-          ctx.fillStyle='rgba(108,99,255,0.8)';
-          ctx.beginPath();ctx.moveTo(pj.x,pj.y);
-          ctx.lineTo(pj.x-dx*18-dy*10,pj.y-dy*18+dx*10);
-          ctx.lineTo(pj.x-dx*18+dy*10,pj.y-dy*18-dx*10);
-          ctx.closePath();ctx.fill();
-        }
-      }
-    }
-    var drawNodes=Math.min(nodes.length,Math.max(0,total-edges.length));
-    for(var g=0;g<drawNodes;g++){
-      var pos=positions[g];
-      var rad=22;
-      ctx.fillStyle='rgba(108,99,255,0.2)';ctx.strokeStyle='#6c63ff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(pos.x,pos.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(pos.label,pos.x,pos.y);
-    }
-    return;
-  }
 
   // --- Trig: circle ---
   if(fml.indexOf('\\sin')>=0||fml.indexOf('\\cos')>=0||fml.indexOf('\\tan')>=0||
@@ -575,7 +527,7 @@ scenes.forEach(function(s,i){
     var afterText2=animStart+(s.type==='list'?s.items.length*0.15:(s.text? s.text.split(' ').length*0.07:0))+0.05+(s.formula?0.5:0);
     tl.to('#vcv'+i,{opacity:1,duration:0.2},afterText2);
     var vp={p:0};
-    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s,vp.p);}},afterText2+0.1);
+    tl.to(vp,{p:1,duration:D*0.55,ease:'none',onUpdate:function(){drawVisual('vcv'+i,s.formula,vp.p,s.text);}},afterText2+0.1);
   }
 
   if(i<N-1){

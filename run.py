@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import Config
 Config.ensure_dirs()
 
-port = int(os.getenv("PORT", "8000"))
+port = int(os.getenv("PORT", "8080"))
 print(f"\n  CerebraFX Studio")
 print(f"  ─────────────")
 print(f"  Abre http://127.0.0.1:{port} en tu navegador\n")
