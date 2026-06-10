@@ -1,8 +1,39 @@
+# API keys
 .env
+
+# Virtual environment
 env/
+venv/
+.venv/
+
+# Python
 __pycache__/
 *.pyc
-output/record/
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Media generados
 *.webm
 *.mp3
 *.mp4
+*.wav
+*.mov
+
+# Outputs del sistema
+output/
+audio/narration.mp3
+scenes/scene_playback.html
+scenes/recording.webm
+videos/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
