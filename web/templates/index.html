@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CerebraFX Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a1a;--surface:#12122a;--surface2:#1a1a3a;--border:#2a2a5a;--primary:#6c63ff;--primary-glow:rgba(108,99,255,0.3);--accent:#00d4ff;--text:#f0f0ff;--text2:#8888bb;--radius:16px;--radius-sm:10px;--shadow:0 8px 32px rgba(0,0,0,0.4)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;overflow-x:hidden}
+body{display:flex;flex-direction:column;min-height:100vh}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:rgba(10,10,26,0.8);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:12px;font-size:22px;font-weight:800}
+.logo svg{width:32px;height:32px}
+.logo span{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header .status{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block}
+
+/* Main */
+main{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 24px 80px;max-width:960px;margin:0 auto;width:100%}
+
+/* Hero */
+.hero{text-align:center;margin-bottom:40px;width:100%}
+.hero h1{font-size:40px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text2);font-size:16px}
+
+/* Input */
+.input-group{display:flex;gap:12px;width:100%;max-width:640px;margin:0 auto 32px}
+.input-group input{flex:1;padding:14px 20px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:border .2s}
+.input-group input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+.input-group input::placeholder{color:var(--text2)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#5a52e0);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--primary-glow)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+.btn-success:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(34,197,94,0.3)}
+
+/* Steps */
+.steps{display:flex;gap:8px;margin-bottom:28px;width:100%;max-width:640px}
+.step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .4s;position:relative}
+.step.active{background:linear-gradient(90deg,var(--primary),var(--accent))}
+.step.done{background:var(--primary)}
+
+/* Pipeline Progress */
+.pipeline{width:100%;max-width:640px;margin-bottom:32px}
+.pipeline-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pipeline-item:last-child{border-bottom:none}
+.pipeline-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--surface2);border:1px solid var(--border);transition:all .3s}
+.pipeline-icon.done{background:var(--primary);border-color:var(--primary)}
+.pipeline-icon.active{background:var(--primary);border-color:var(--primary);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--primary-glow)}50%{box-shadow:0 0 0 8px transparent}}
+.pipeline-info{flex:1}
+.pipeline-name{font-size:14px;font-weight:600}
+.pipeline-desc{font-size:12px;color:var(--text2);margin-top:2px}
+.pipeline-status{font-size:12px;font-weight:600;color:var(--primary)}
+
+/* Script Preview */
+#script-area{width:100%;margin-bottom:28px;display:none}
+#script-area.visible{display:block}
+.section-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section-title span{color:var(--text2);font-weight:400;font-size:14px}
+.scene-grid{display:grid;gap:12px}
+.scene-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .2s}
+.scene-card:hover{border-color:var(--primary);box-shadow:0 0 20px rgba(108,99,255,0.08)}
+.scene-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.scene-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--surface2);color:var(--accent)}
+.scene-badge.hook{color:#ff6b6b}
+.scene-badge.formula{color:#ffd93d}
+.scene-badge.step{color:var(--accent)}
+.scene-badge.graph{color:#6c63ff}
+.scene-badge.visual{color:#22c55e}
+.scene-badge.conclusion{color:#ff8c42}
+.scene-text{font-size:15px;line-height:1.5;color:var(--text)}
+.scene-formula{display:inline-block;margin-top:8px;padding:10px 16px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--accent);font-family:'Courier New',monospace}
+.scene-narration{font-size:13px;color:var(--text2);margin-top:6px;font-style:italic}
+
+/* Actions */
+.actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%}
+
+/* Download */
+.download-area{display:none;text-align:center;padding:40px 0;width:100%}
+.download-area.visible{display:block}
+.download-icon{font-size:48px;margin-bottom:12px}
+.download-area p{color:var(--text2);margin-bottom:16px}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease forwards}
+
+/* Error */
+.error{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:var(--radius-sm);padding:14px 18px;color:#ff6b6b;font-size:14px;margin-bottom:20px;display:none}
+.error.visible{display:block}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;width:100%}
+.empty-state svg{width:64px;height:64px;opacity:.3;margin-bottom:16px}
+.empty-state h3{color:var(--text2);font-weight:500;font-size:16px}
+
+@media(max-width:640px){
+  header{padding:12px 16px}
+  .hero h1{font-size:28px}
+  .input-group{flex-direction:column}
+  main{padding:24px 16px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="url(#lg)"/><text x="16" y="23" text-anchor="middle" fill="#fff" font-size="18" font-weight="800">C</text><defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6c63ff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs></svg>
+    <span>CerebraFX</span>
+  </div>
+  <div class="status"><span class="dot"></span>Local</div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Studio</h1>
+    <p>Genera videos educativos de matemáticas con IA</p>
+  </div>
+
+  <div class="input-group fade-in">
+    <input type="text" id="topic-input" placeholder="Ej: Teorema de Pitágoras, Derivadas, Integrales..." autofocus>
+    <button class="btn btn-primary" id="gen-script-btn" onclick="generateScript()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v20M2 12h20"/></svg>
+      Generar guion
+    </button>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <div class="error" id="error"></div>
+
+  <div id="script-area">
+    <div class="section-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Guion <span id="scene-count"></span>
+    </div>
+    <div class="scene-grid" id="scene-grid"></div>
+  </div>
+
+  <div class="pipeline" id="pipeline" style="display:none"></div>
+
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn btn-primary" id="gen-video-btn" onclick="generateVideo()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Generar video
+    </button>
+    <button class="btn btn-secondary" onclick="resetAll()">Nuevo tema</button>
+  </div>
+
+  <div class="download-area" id="download-area">
+    <div class="download-icon">🎬</div>
+    <h2 style="margin-bottom:4px">Video listo</h2>
+    <p>Descarga tu video educativo</p>
+    <a class="btn btn-success" id="download-link" download>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar MP4
+    </a>
+  </div>
+
+  <div class="empty-state" id="empty-state">
+    <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="24" stroke="currentColor" stroke-width="2"/><path d="M20 32h24M32 20v24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <h3>Ingresa un tema y genera el guion</h3>
+  </div>
+</main>
+
+<script>
+const BASE = '';
+let currentScript = null;
+let taskId = null;
+let pollInterval = null;
+
+const STEPS_MAP = ['script','audio','html','video','final'];
+const STEP_LABELS = {script:'Guion',audio:'Audio',html:'Escenas',video:'Video',final:'Combinar'};
+
+function showError(msg){
+  const el=document.getElementById('error');
+  el.textContent=msg;
+  el.classList.add('visible');
+}
+
+function hideError(){
+  document.getElementById('error').classList.remove('visible');
+}
+
+async function generateScript(){
+  const topic=document.getElementById('topic-input').value.trim();
+  if(!topic){showError('Ingresa un tema');return}
+  hideError();
+  const btn=document.getElementById('gen-script-btn');
+  btn.disabled=true;btn.textContent='Generando...';
+
+  try{
+    const res=await fetch(BASE+'/api/generate-script',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic})
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.detail||'Error')}
+    const data=await res.json();
+    currentScript=data;
+    renderScript(data);
+    document.getElementById('actions').style.display='flex';
+    document.getElementById('empty-state').style.display='none';
+  }catch(e){
+    showError(e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='Generar guion';
+  }
+}
+
+function renderScript(data){
+  const area=document.getElementById('script-area');
+  area.classList.add('visible');
+  document.getElementById('scene-count').textContent=data.scenes.length+' escenas';
+  const grid=document.getElementById('scene-grid');
+  grid.innerHTML='';
+  data.scenes.forEach((s,i)=>{
+    const card=document.createElement('div');
+    card.className='scene-card fade-in';
+    card.style.animationDelay=(i*0.05)+'s';
+    const icons={hook:'❓',formula:'📐',step:'👉',graph:'📈',visual:'△',conclusion:'🎯'};
+    card.innerHTML=`
+      <div class="scene-header">
+        <span style="font-size:20px">${icons[s.type]||'📌'}</span>
+        <span class="scene-badge ${s.type}">${s.type}</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--text2)">#${i+1}</span>
+      </div>
+      <div class="scene-text">${s.text}</div>
+      ${s.formula?`<div class="scene-formula">${s.formula}</div>`:''}
+      ${s.narration?`<div class="scene-narration">🎤 ${s.narration}</div>`:''}
+      ${s.graph_func?`<div class="scene-narration">📊 f(x)=${s.graph_func}</div>`:''}
+    `;
+    grid.appendChild(card);
+  });
+  updateSteps(0);
+}
+
+function updateSteps(idx){
+  const container=document.getElementById('steps');
+  container.innerHTML='';
+  for(let i=0;i<STEPS_MAP.length;i++){
+    const div=document.createElement('div');
+    div.className='step'+(i<idx?' done':'')+(i===idx?' active':'');
+    container.appendChild(div);
+  }
+}
+
+async function generateVideo(){
+  if(!currentScript){showError('Genera un guion primero');return}
+  hideError();
+  const btn=document.getElementById('gen-video-btn');
+  btn.disabled=true;btn.textContent='Procesando...';
+  document.getElementById('download-area').classList.remove('visible');
+
+  const pipeline=document.getElementById('pipeline');
+  pipeline.style.display='block';
+  renderPipeline();
+
+  try{
+    const res=await fetch(BASE+'/api/generate-video',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:document.getElementById('topic-input').value.trim()})
+    });
+    if(!res.ok)throw new Error('Error al iniciar');
+    const data=await res.json();
+    taskId=data.task_id;
+    pollInterval=setInterval(()=>pollStatus(taskId),600);
+  }catch(e){
+    showError(e.message);
+    btn.disabled=false;btn.textContent='Generar video';
+    pipeline.style.display='none';
+  }
+}
+
+function renderPipeline(){
+  const container=document.getElementById('pipeline');
+  container.innerHTML='';
+  const items=['script','audio','html','video','final'];
+  const labels={script:'Guion con Gemini',audio:'Audio con ElevenLabs',html:'Escenas animadas',video:'Render con Playwright',final:'Video final'};
+  const descs={script:'Generando guion estructurado',audio:'Sintetizando voz',html:'Preparando animaciones',video:'Renderizando escenas',final:'Combinando video + audio'};
+  items.forEach((k,i)=>{
+    const div=document.createElement('div');
+    div.className='pipeline-item';
+    div.id='pipe-'+k;
+    div.innerHTML=`
+      <div class="pipeline-icon" id="pipe-icon-${k}">${i+1}</div>
+      <div class="pipeline-info">
+        <div class="pipeline-name">${labels[k]}</div>
+        <div class="pipeline-desc" id="pipe-desc-${k}">${descs[k]}</div>
+      </div>
+      <div class="pipeline-status" id="pipe-status-${k}"></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function setPipelineStep(step,msg){
+  const idx=STEPS_MAP.indexOf(step);
+  if(idx<0)return;
+  updateSteps(idx);
+  for(let i=0;i<STEPS_MAP.length;i++){
+    const icon=document.getElementById('pipe-icon-'+STEPS_MAP[i]);
+    const status=document.getElementById('pipe-status-'+STEPS_MAP[i]);
+    if(i<idx){
+      icon.className='pipeline-icon done';icon.textContent='✓';
+      status.textContent='Listo';
+    }else if(i===idx){
+      icon.className='pipeline-icon active';icon.textContent=idx+1;
+      status.textContent='Procesando...';
+    }else{
+      icon.className='pipeline-icon';icon.textContent=i+1;
+      status.textContent='';
+    }
+  }
+  if(msg){
+    document.getElementById('pipe-desc-'+step).textContent=msg;
+  }
+}
+
+function setPipelineError(msg){
+  for(let i=0;i<STEPS_MAP.length;i++){
+    const icon=document.getElementById('pipe-icon-'+STEPS_MAP[i]);
+    const status=document.getElementById('pipe-status-'+STEPS_MAP[i]);
+    if(icon.className.includes('active')){
+      icon.style.background='#ff6b6b';icon.style.borderColor='#ff6b6b';
+      status.textContent='Error';status.style.color='#ff6b6b';
+    }
+  }
+  showError(msg);
+}
+
+async function pollStatus(tid){
+  try{
+    const res=await fetch(BASE+'/api/status/'+tid);
+    if(!res.ok){clearInterval(pollInterval);return}
+    const data=await res.json();
+
+    if(data.status==='script'||data.status==='audio'||data.status==='html'||data.status==='video'||data.status==='final'){
+      setPipelineStep(data.status,data.message);
+    }else if(data.status==='completed'){
+      clearInterval(pollInterval);
+      setPipelineStep('final','Video listo');
+      document.getElementById('pipe-status-final').textContent='✓ Listo';
+      document.getElementById('pipe-icon-final').className='pipeline-icon done';
+      document.getElementById('pipe-icon-final').textContent='✓';
+      document.getElementById('gen-video-btn').disabled=false;
+      document.getElementById('gen-video-btn').textContent='Generar video';
+      showDownload(tid);
+    }else if(data.status==='failed'){
+      clearInterval(pollInterval);
+      setPipelineError(data.message);
+      document.getElementById('gen-video-btn').disabled=false;
+      document.getElementById('gen-video-btn').textContent='Generar video';
+    }
+  }catch(e){
+    console.error(e);
+  }
+}
+
+function showDownload(tid){
+  const area=document.getElementById('download-area');
+  area.classList.add('visible');
+  document.getElementById('download-link').href=BASE+'/api/download/'+tid;
+  area.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function resetAll(){
+  currentScript=null;
+  taskId=null;
+  if(pollInterval)clearInterval(pollInterval);
+  document.getElementById('script-area').classList.remove('visible');
+  document.getElementById('actions').style.display='none';
+  document.getElementById('download-area').classList.remove('visible');
+  document.getElementById('pipeline').style.display='none';
+  document.getElementById('empty-state').style.display='block';
+  document.getElementById('steps').innerHTML='';
+  document.getElementById('topic-input').value='';
+  document.getElementById('topic-input').focus();
+  hideError();
+}
+
+document.getElementById('topic-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter')generateScript();
+});
+</script>
+</body>
+</html>
