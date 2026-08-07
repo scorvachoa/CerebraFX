@@ -403,6 +403,29 @@ main.main-editor{max-width:1400px;padding-bottom:0}
         <div class="col-label">Efectos</div>
         <div class="editor-ctrl-scroll">
           <div class="ctrl-group">
+            <div class="col-label" style="margin-bottom:8px">🏷️ Marca</div>
+            <label>Nombre / logo</label>
+            <input id="brand-name" oninput="brandChanged('name',this.value)" placeholder="CerebraFX">
+            <label>Logo (URL imagen, opcional)</label>
+            <input id="brand-logo_image" oninput="brandChanged('logo_image',this.value)" placeholder="https://.../logo.png">
+            <label>Color de marca</label>
+            <select id="brand-logo_color" onchange="brandChanged('logo_color',this.value)">
+              <option value="#6c63ff">Púrpura</option>
+              <option value="#ff6b6b">Rojo</option>
+              <option value="#ffd93d">Ámbar</option>
+              <option value="#22c55e">Verde</option>
+              <option value="#00d4ff">Cian</option>
+              <option value="#ff8c42">Naranja</option>
+              <option value="#ff6b9d">Rosa</option>
+            </select>
+            <label>Canal</label>
+            <input id="brand-channel" oninput="brandChanged('subscribe_channel',this.value)" placeholder="@CerebraFX">
+            <label>Texto botón suscripción</label>
+            <input id="brand-subscribe_text" oninput="brandChanged('subscribe_text',this.value)" placeholder="Suscríbete">
+            <label>Eslogan de cierre</label>
+            <input id="brand-tagline" oninput="brandChanged('tagline',this.value)" placeholder="Matemáticas claras, cada día">
+          </div>
+          <div class="ctrl-group">
             <label>Transición</label>
             <select id="ctrl-transition" onchange="ctrlChanged('transition',this.value)">
               <option value="fade">Fade</option>
@@ -511,11 +534,12 @@ function saveProject(){
   const topic=document.getElementById('topic-input').value.trim();
   const category=document.getElementById('category-select').value;
   const project={
-    version:1,
+    version:2,
     topic,
     category,
     title:currentScript.title,
-    scenes:currentScript.scenes
+    scenes:currentScript.scenes,
+    brand:currentScript.brand||{}
   };
   const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -532,7 +556,7 @@ async function loadProject(event){
     const text=await file.text();
     const project=JSON.parse(text);
     if(!project.scenes||!project.version)throw new Error('Archivo inválido');
-    currentScript={title:project.title||'',scenes:project.scenes,category:project.category||'general'};
+    currentScript={title:project.title||'',scenes:project.scenes,category:project.category||'general',brand:project.brand||{}};
     document.getElementById('topic-input').value=project.topic||'';
     document.getElementById('category-select').value=project.category||'general';
     renderScript(currentScript);
@@ -598,7 +622,7 @@ async function generateVideo(){
     const res=await fetch(BASE+'/api/generate-video',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:document.getElementById('topic-input').value.trim(),script:currentScript,category:document.getElementById('category-select').value})
+      body:JSON.stringify({topic:document.getElementById('topic-input').value.trim(),script:currentScript,category:document.getElementById('category-select').value,brand:currentScript.brand||{}})
     });
     if(!res.ok)throw new Error('Error al iniciar');
     const data=await res.json();
@@ -761,6 +785,28 @@ let editorOpen=false;
 let editorSelected=0;
 const THEME_COLORS=['#6c63ff','#ff6b6b','#ffd93d','#22c55e','#00d4ff','#ff8c42','#ff6b9d'];
 
+function getBrand(){
+  if(!currentScript.brand)currentScript.brand={};
+  return currentScript.brand;
+}
+
+function populateBrandUI(){
+  const b=getBrand();
+  const set=(id,val)=>document.getElementById(id).value=val==null?'':val;
+  set('brand-name',b.name);
+  set('brand-logo_image',b.logo_image);
+  set('brand-logo_color',b.logo_color);
+  set('brand-channel',b.subscribe_channel);
+  set('brand-subscribe_text',b.subscribe_text);
+  set('brand-tagline',b.tagline);
+}
+
+function brandChanged(field,value){
+  const b=getBrand();
+  b[field]=value;
+  document.getElementById('editor-json-ta').value=JSON.stringify(currentScript,null,2);
+}
+
 function defScene(s){
   if(!s.transition)s.transition='fade';
   if(!s.textPos)s.textPos='mid';
@@ -793,6 +839,7 @@ function closeEditor(){
 function buildEditor(){
   const scroll=document.getElementById('editor-scroll');
   scroll.innerHTML='';
+  populateBrandUI();
   const scenes=currentScript.scenes;
   scenes.forEach(s=>defScene(s));
   if(editorSelected>=scenes.length)editorSelected=0;
@@ -998,7 +1045,7 @@ async function previewScene(idx){
     const res=await fetch(BASE+'/api/preview-scene',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({scene:s})
+      body:JSON.stringify({scene:s,brand:currentScript.brand||{}})
     });
     if(!res.ok)throw new Error('Error al generar preview');
     const html=await res.text();

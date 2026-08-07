@@ -70,6 +70,7 @@ class GenerateRequest(BaseModel):
     topic: str
     category: str = "general"
     script: dict | None = None
+    brand: dict | None = None
 
 
 @app.post("/api/generate-script")
@@ -83,6 +84,7 @@ async def api_generate_script(req: ScriptRequest):
 
 class PreviewRequest(BaseModel):
     scene: dict
+    brand: dict | None = None
 
 
 class BatchRequest(BaseModel):
@@ -92,7 +94,7 @@ class BatchRequest(BaseModel):
 @app.post("/api/preview-scene")
 async def api_preview_scene(req: PreviewRequest):
     try:
-        html = await generate_preview(req.scene)
+        html = await generate_preview(req.scene, req.brand)
         return HTMLResponse(content=html)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -176,7 +178,7 @@ async def api_generate_video(req: GenerateRequest):
         "created_at": time.time(),
     }
 
-    asyncio.create_task(_run_video_pipeline(task_id, req.topic, req.script, req.category))
+    asyncio.create_task(_run_video_pipeline(task_id, req.topic, req.script, req.category, req.brand))
 
     return {"task_id": task_id}
 
@@ -198,7 +200,7 @@ async def _run_batch_pipeline(batch_id: str, topics: list[str], task_infos: list
     batches[batch_id]["status"] = "completed"
 
 
-async def _run_video_pipeline(task_id: str, topic: str, script: dict | None = None, category: str = "general"):
+async def _run_video_pipeline(task_id: str, topic: str, script: dict | None = None, category: str = "general", brand: dict | None = None):
     async def progress(step: str, pct: int, msg: str):
         tasks[task_id].update({
             "status": step,
@@ -208,7 +210,7 @@ async def _run_video_pipeline(task_id: str, topic: str, script: dict | None = No
 
     try:
         tasks[task_id]["status"] = TaskStatus.SCRIPT
-        final_path = await generate_full_video(topic, task_id=task_id, script=script, category=category, progress_callback=progress)
+        final_path = await generate_full_video(topic, task_id=task_id, script=script, category=category, brand=brand, progress_callback=progress)
 
         tasks[task_id].update({
             "status": TaskStatus.COMPLETED,

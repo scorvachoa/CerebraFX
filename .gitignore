@@ -24,9 +24,8 @@ build/
 
 # Outputs del sistema
 output/
-audio/narration.mp3
-scenes/scene_playback.html
-scenes/recording.webm
+audio/narration*.mp3
+scenes/
 videos/
 
 # IDE

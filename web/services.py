@@ -12,16 +12,6 @@ def _generate_script_sync(topic: str, category: str = "general") -> dict:
     return generate_script(topic, category)
 
 
-def _generate_audio_sync(text: str, suffix: str = "") -> Path:
-    from main import generate_audio
-    return generate_audio(text, suffix)
-
-
-def _get_audio_duration_sync(path: Path) -> float:
-    from main import get_audio_duration
-    return get_audio_duration(path)
-
-
 def _generate_html_sync(script: dict, duration: float, suffix: str = "") -> Path:
     from main import generate_html
     return generate_html(script, duration, suffix)
@@ -32,16 +22,24 @@ def _render_video_sync(html_path: Path, duration: float, suffix: str = "") -> Pa
     return render_video(html_path, duration, suffix)
 
 
-def _create_final_video_sync(video_path: Path, audio_path: Path, suffix: str = "") -> Path:
+def _create_final_video_sync(video_path: Path, audio_paths: list, offsets: list[float], suffix: str = "") -> Path:
     from main import create_final_video
-    return create_final_video(video_path, audio_path, suffix)
+    return create_final_video(video_path, audio_paths, offsets, suffix)
 
 
-async def generate_preview(scene: dict) -> str:
+async def generate_preview(scene: dict, brand: dict | None = None) -> str:
+    from main import build_brand
     template = (Path(__file__).parent.parent / "templates" / "preview.html").read_text(encoding="utf-8")
+    engine = (Path(__file__).parent.parent / "templates" / "graph_engine.js").read_text(encoding="utf-8")
+    engine = engine.replace("</script>", "<\\/script>").replace("</", "<\\/")
+    template = template.replace("{{GRAPH_ENGINE}}", engine)
     scene_json = json.dumps(scene, ensure_ascii=False).replace("</", "<\\/")
     duration = 8.0
-    html = template.replace("{{SCENE}}", scene_json).replace("{{DURATION}}", str(duration))
+    fps = 24
+    brand_json = json.dumps(build_brand({"brand": brand} if brand else None), ensure_ascii=False).replace("</", "<\\/")
+    html = template.replace("{{SCENE}}", scene_json)
+    html = html.replace("{{BRAND}}", brand_json)
+    html = html.replace("{{DURATION}}", str(duration)).replace("{{FPS}}", str(fps))
     return html
 
 
@@ -50,7 +48,7 @@ async def generate_script(topic: str, category: str = "general") -> dict:
     return await loop.run_in_executor(_executor, _generate_script_sync, topic, category)
 
 
-async def generate_full_video(topic: str, task_id: str = "", script: dict | None = None, category: str = "general", progress_callback=None) -> Path:
+async def generate_full_video(topic: str, task_id: str = "", script: dict | None = None, category: str = "general", brand: dict | None = None, progress_callback=None) -> Path:
     loop = asyncio.get_event_loop()
     suffix = task_id[:8] if task_id else ""
 
@@ -62,32 +60,40 @@ async def generate_full_video(topic: str, task_id: str = "", script: dict | None
         if progress_callback:
             await progress_callback("script", 0, "Usando guion existente...")
 
-    full_text = ". ".join(s["narration"] if "narration" in s else s["text"] for s in script["scenes"])
-
     if progress_callback:
         await progress_callback("script", 100, "Guion listo")
-        await progress_callback("audio", 0, f"Generando audio ({len(full_text)} caracteres)...")
-    audio_path = await loop.run_in_executor(_executor, _generate_audio_sync, full_text, suffix)
+
+    from main import Config
+
+    # Audio por escena (la escena final de cierre no tiene narración)
+    if progress_callback:
+        await progress_callback("audio", 0, "Generando narración por escena...")
+
+    from main import generate_audio_batch, scene_offsets, inject_durations, apply_branding
+
+    paths, durations = await loop.run_in_executor(
+        _executor, generate_audio_batch, script, suffix,
+    )
+    offsets = scene_offsets(durations)
+    inject_durations(script, durations)
+    apply_branding(script, brand)
+    total = sum(durations) + Config.END_SCREEN
 
     if progress_callback:
-        await progress_callback("audio", 50, "Audio generado, obteniendo duración...")
-    duration = await loop.run_in_executor(_executor, _get_audio_duration_sync, audio_path)
-
-    if progress_callback:
-        await progress_callback("audio", 100, f"Duración: {duration:.1f}s")
+        await progress_callback("audio", 100, f"Narraciones listas · duración {total:.1f}s")
         await progress_callback("html", 0, "Generando HTML de escenas...")
-    html_path = await loop.run_in_executor(_executor, _generate_html_sync, script, duration, suffix)
+    html_path = await loop.run_in_executor(_executor, _generate_html_sync, script, total, suffix)
 
     if progress_callback:
         await progress_callback("html", 100, "HTML listo")
-        await progress_callback("video", 0, "Renderizando video con Playwright...")
+        await progress_callback("video", 0, "Renderizando frames con Playwright...")
     t0 = time.time()
-    video_path = await loop.run_in_executor(_executor, _render_video_sync, html_path, duration, suffix)
+    video_path = await loop.run_in_executor(_executor, _render_video_sync, html_path, total, suffix)
 
     if progress_callback:
-        await progress_callback("video", 70, f"Video crudo listo ({time.time()-t0:.1f}s)")
+        await progress_callback("video", 70, f"Frames renderizados ({time.time()-t0:.1f}s)")
         await progress_callback("final", 0, "Combinando video + audio + música...")
-    final_path = await loop.run_in_executor(_executor, _create_final_video_sync, video_path, audio_path, suffix)
+    final_path = await loop.run_in_executor(_executor, _create_final_video_sync, video_path, paths, offsets, suffix)
 
     if progress_callback:
         await progress_callback("final", 100, "Video final listo")
